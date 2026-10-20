@@ -15,11 +15,14 @@ A lightweight Ubuntu / GNOME Shell Top Bar extension (`tlp-switcher@local.extens
   - TLP Service State (`enabled` / `disabled`)
   - Visual banner when forcing High Performance on battery power.
 - **Instant Passwordless Switching**: Includes a strictly scoped `sudoers` rule (`/etc/sudoers.d/tlp-switcher`) and Polkit rule (`/etc/polkit-1/rules.d/49-tlp-switcher.rules`) restricted solely to `/usr/sbin/tlp ac`, `/usr/sbin/tlp bat`, and `/usr/sbin/tlp start`.
+- **Panel Position Settings (Left / Center / Right)**: Move the extension indicator between the **Right**, **Left**, or **Center** of the top bar directly from the indicator's popup menu (`Panel Position` submenu) or via the Extension Settings window (`gnome-extensions prefs tlp-switcher@local.extension`).
 
 ## Project Structure
 
 - `tlp-switcher@local.extension/metadata.json` — Extension manifest (supports GNOME Shell 45–50)
 - `tlp-switcher@local.extension/extension.js` — Main indicator UI, menu, and async TLP subprocess controller
+- `tlp-switcher@local.extension/prefs.js` — Libadwaita extension preferences window (Panel Position settings)
+- `tlp-switcher@local.extension/schemas/` — GSettings schema (`org.gnome.shell.extensions.tlp-switcher`)
 - `tlp-switcher@local.extension/stylesheet.css` — Top bar and popup menu styling
 - `sudoers/tlp-switcher` — Scoped passwordless sudo rule for `tlp ac|bat|start`
 - `polkit/49-tlp-switcher.rules` — Fallback Polkit rule for `pkexec /usr/sbin/tlp`

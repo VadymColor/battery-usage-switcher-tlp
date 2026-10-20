@@ -20,10 +20,16 @@ fi
 
 # 2. Install GNOME Shell Extension files into user's extension directory
 echo "-> Copying extension files to: ${EXT_DEST_DIR}"
-mkdir -p "${EXT_DEST_DIR}"
+mkdir -p "${EXT_DEST_DIR}/schemas"
 cp -f "${EXT_SRC_DIR}/metadata.json" "${EXT_DEST_DIR}/metadata.json"
 cp -f "${EXT_SRC_DIR}/extension.js" "${EXT_DEST_DIR}/extension.js"
+cp -f "${EXT_SRC_DIR}/prefs.js" "${EXT_DEST_DIR}/prefs.js"
 cp -f "${EXT_SRC_DIR}/stylesheet.css" "${EXT_DEST_DIR}/stylesheet.css"
+cp -rf "${EXT_SRC_DIR}/schemas/"* "${EXT_DEST_DIR}/schemas/"
+
+if command -v glib-compile-schemas >/dev/null 2>&1; then
+    glib-compile-schemas "${EXT_DEST_DIR}/schemas"
+fi
 
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
     chown -R "${TARGET_USER}:${TARGET_USER}" "${TARGET_HOME}/.local/share/gnome-shell"

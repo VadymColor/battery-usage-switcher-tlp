@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.tlp-switcher" path="/org/gnome/shell/extensions/tlp-switcher/">
+    <key name="panel-position" type="s">
+      <choices>
+        <choice value="left"/>
+        <choice value="center"/>
+        <choice value="right"/>
+      </choices>
+      <default>'right'</default>
+      <summary>Panel Position</summary>
+      <description>Horizontal position of the TLP indicator in the top panel (left, center, or right).</description>
+    </key>
+  </schema>
+</schemalist>

@@ -16,9 +16,11 @@ const POLL_INTERVAL_SECONDS = 15;
 
 const TlpIndicator = GObject.registerClass(
 class TlpIndicator extends PanelMenu.Button {
-    _init() {
+    _init(settings, openPreferencesCallback) {
         super._init(0.0, 'TLP Power Mode Switcher', false);
 
+        this._settings = settings;
+        this._openPreferencesCallback = openPreferencesCallback;
         this._cancellable = new Gio.Cancellable();
         this._isSwitching = false;
         this._pollTimeoutId = null;
@@ -156,12 +158,71 @@ class TlpIndicator extends PanelMenu.Button {
         });
         this.menu.addMenuItem(this._refreshItem);
 
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        // Panel Position Submenu
+        this._positionSubMenu = new PopupMenu.PopupSubMenuMenuItem('Panel Position');
+        this._positionItems = {};
+
+        const positions = [
+            { key: 'left', label: 'Left' },
+            { key: 'center', label: 'Center' },
+            { key: 'right', label: 'Right' },
+        ];
+
+        for (const { key, label } of positions) {
+            const item = new PopupMenu.PopupMenuItem(label);
+            item.connect('activate', () => {
+                if (this._settings) {
+                    this._settings.set_string('panel-position', key);
+                }
+            });
+            this._positionSubMenu.menu.addMenuItem(item);
+            this._positionItems[key] = item;
+        }
+        this.menu.addMenuItem(this._positionSubMenu);
+
+        // Extension Settings button
+        this._settingsItem = new PopupMenu.PopupImageMenuItem(
+            'Extension Settings',
+            'preferences-system-symbolic'
+        );
+        this._settingsItem.connect('activate', () => {
+            this._openPreferencesCallback?.();
+        });
+        this.menu.addMenuItem(this._settingsItem);
+
+        this.updatePositionOrnament();
+
         // Refresh status whenever the user opens the menu
         this._menuOpenChangedId = this.menu.connect('open-state-changed', (_menu, isOpen) => {
             if (isOpen) {
                 this._refreshStatus();
             }
         });
+    }
+
+    updatePositionOrnament() {
+        if (!this._settings || !this._positionItems) {
+            return;
+        }
+
+        const currentPos = this._settings.get_string('panel-position') || 'right';
+        const labels = {
+            left: 'Left',
+            center: 'Center',
+            right: 'Right',
+        };
+
+        this._positionSubMenu?.label.set_text(`Panel Position: ${labels[currentPos] || 'Right'}`);
+
+        for (const [key, item] of Object.entries(this._positionItems)) {
+            item.setOrnament(
+                key === currentPos
+                    ? PopupMenu.Ornament.CHECK
+                    : PopupMenu.Ornament.NONE
+            );
+        }
     }
 
     _setupFileMonitor() {
@@ -422,17 +483,74 @@ class TlpIndicator extends PanelMenu.Button {
             this._menuOpenChangedId = null;
         }
 
+        this._settings = null;
+        this._openPreferencesCallback = null;
+
         super.destroy();
     }
 });
 
 export default class TlpSwitcherExtension extends Extension {
     enable() {
-        this._indicator = new TlpIndicator();
-        Main.panel.addToStatusArea(this.uuid, this._indicator);
+        this._settings = this.getSettings();
+        this._indicator = new TlpIndicator(this._settings, () => this.openPreferences());
+
+        const position = this._getValidPosition();
+        const index = this._getInsertIndex(position);
+        Main.panel.addToStatusArea(this.uuid, this._indicator, index, position);
+
+        this._settingsChangedId = this._settings.connect('changed::panel-position', () => {
+            this._updatePanelPosition();
+        });
+    }
+
+    _getValidPosition() {
+        const pos = this._settings?.get_string('panel-position') || 'right';
+        return ['left', 'center', 'right'].includes(pos) ? pos : 'right';
+    }
+
+    _getInsertIndex(position) {
+        // On 'left', index 1 places the indicator right after the Activities button.
+        // On 'center', index 1 places it right after the Date/Time menu.
+        // On 'right', index 0 places it at the start of the right status box.
+        return position === 'right' ? 0 : 1;
+    }
+
+    _updatePanelPosition() {
+        if (!this._indicator) {
+            return;
+        }
+
+        const position = this._getValidPosition();
+        const index = this._getInsertIndex(position);
+        const boxes = {
+            left: Main.panel._leftBox,
+            center: Main.panel._centerBox,
+            right: Main.panel._rightBox,
+        };
+        const targetBox = boxes[position] || Main.panel._rightBox;
+
+        const container = this._indicator.container;
+        const parent = container.get_parent();
+
+        if (parent !== targetBox) {
+            this._indicator.menu?.close();
+            if (parent) {
+                parent.remove_child(container);
+            }
+            targetBox.insert_child_at_index(container, index);
+        }
+
+        this._indicator.updatePositionOrnament();
     }
 
     disable() {
+        if (this._settings && this._settingsChangedId) {
+            this._settings.disconnect(this._settingsChangedId);
+            this._settingsChangedId = null;
+        }
+        this._settings = null;
+
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
