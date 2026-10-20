@@ -1,0 +1,16 @@
+{
+  "uuid": "tlp-switcher@local.extension",
+  "name": "TLP Power Mode Switcher",
+  "description": "Switch TLP between High Performance (AC), Battery Savings (BAT), and Automatic (start) modes directly from the Ubuntu top bar — allowing forced high performance even on battery power.",
+  "version": 1,
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "url": ""
+}
+

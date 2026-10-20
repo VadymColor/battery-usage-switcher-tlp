@@ -1,0 +1,3 @@
+# Allow passwordless switching of TLP power modes (ac, bat, start)
+%sudo ALL=(root) NOPASSWD: /usr/sbin/tlp ac, /usr/sbin/tlp bat, /usr/sbin/tlp start
+

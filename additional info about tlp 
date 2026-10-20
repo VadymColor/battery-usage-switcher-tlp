@@ -1,0 +1,56 @@
+TLP automatically switches between high performance (AC profile) and battery savings (BAT profile) the moment you plug or unplug your power adapter.
+
+To manually force the laptop into either mode, or to permanently tweak how aggressive these power profiles are, copy and run this block:
+
+Bash
+# ==============================================================================
+# 1. TEMPORARY OVERRIDES (These last until you plug/unplug the power cord)
+# ==============================================================================
+
+# Check the current active TLP profile and system power state
+# sudo : executes with root privileges
+# tlp-stat : TLP's diagnostic and reporting tool
+# -s : flag to filter output to just the basic system status and active profile
+sudo tlp-stat -s
+
+# Force TLP into Maximum Battery Savings mode immediately
+# tlp : calls the main command-line utility
+# bat : forces the 'battery' power profile, aggressively throttling components to save power
+sudo tlp bat
+
+# Force TLP into High Performance mode immediately
+# ac : forces the 'AC' power profile, lifting thermal and power limits for maximum speed
+sudo tlp ac
+
+# Reset TLP back to Automatic mode
+# start : re-evaluates the physical power source (plugged in or unplugged) and applies the correct default profile
+sudo tlp start
+
+# ==============================================================================
+# 2. PERMANENT CONFIGURATION TWEAKS
+# ==============================================================================
+
+# Open the TLP configuration file to permanently change hardware behavior
+# nano : a lightweight, terminal-based text editor
+# /etc/tlp.conf : the primary configuration file containing all power rules
+sudo nano /etc/tlp.conf
+
+# NOTE: While inside nano, press Ctrl+W to search for the following lines. 
+# Remove the '#' at the start of the line to enable them, and set your desired values.
+#
+# To control the overall laptop cooling and performance profile:
+# PLATFORM_PROFILE_ON_AC=performance
+# PLATFORM_PROFILE_ON_BAT=low-power
+#
+# To control how the Intel/AMD CPU scales its clock speeds:
+# CPU_ENERGY_PERF_POLICY_ON_AC=performance
+# CPU_ENERGY_PERF_POLICY_ON_BAT=power
+#
+# After editing, press Ctrl+O then Enter to save, and Ctrl+X to exit nano.
+
+# Restart the TLP background service to permanently apply any changes made to the config file
+# systemctl : the control interface for systemd services
+# restart : stops and immediately starts the service to load the new settings into memory
+# tlp.service : the specific power management daemon
+sudo systemctl restart tlp.service
+Verification: After running sudo tlp bat or sudo tlp ac, run sudo tlp-stat -s again. Look at the bottom of the output for Mode = battery or Mode = AC to confirm the profile successfully switched.

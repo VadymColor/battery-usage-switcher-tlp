@@ -1,0 +1,36 @@
+/* TLP Power Mode Switcher Stylesheet */
+
+.tlp-panel-box {
+    spacing: 5px;
+    padding: 0 2px;
+}
+
+.tlp-panel-label {
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.tlp-panel-ac-manual {
+    color: #ff9800;
+}
+
+.tlp-panel-bat-manual {
+    color: #4caf50;
+}
+
+.tlp-status-header {
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+.tlp-status-subtext {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.tlp-override-banner {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #ffb74d;
+}
+

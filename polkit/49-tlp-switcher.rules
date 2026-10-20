@@ -1,0 +1,10 @@
+// Allow local active users in the sudo/adm/wheel group to switch TLP power modes without a password prompt
+polkit.addRule(function(action, subject) {
+    if (action.id === "org.freedesktop.policykit.exec" &&
+        action.lookup("program") === "/usr/sbin/tlp" &&
+        subject.active && subject.local &&
+        (subject.isInGroup("sudo") || subject.isInGroup("adm") || subject.isInGroup("wheel"))) {
+        return polkit.Result.YES;
+    }
+});
+
