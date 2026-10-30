@@ -16,12 +16,14 @@ A lightweight Ubuntu / GNOME Shell Top Bar extension (`tlp-switcher@local.extens
   - Visual banner when forcing High Performance on battery power.
 - **Instant Passwordless Switching**: Includes a strictly scoped `sudoers` rule (`/etc/sudoers.d/tlp-switcher`) and Polkit rule (`/etc/polkit-1/rules.d/49-tlp-switcher.rules`) restricted solely to `/usr/sbin/tlp ac`, `/usr/sbin/tlp bat`, and `/usr/sbin/tlp start`.
 - **Panel Position Settings (Left / Center / Right)**: Move the extension indicator between the **Right**, **Left**, or **Center** of the top bar directly from the indicator's popup menu (`Panel Position` submenu) or via the Extension Settings window (`gnome-extensions prefs tlp-switcher@local.extension`).
+- **Never Sleep Mode (Keep Awake & Lid-Close Monitor Off)**: Toggle **Never Sleep** from the top bar menu or Extension Settings so your laptop stays awake and all background processes, music, and video playback remain active — while automatically switching off the laptop monitor (DPMS off) **only when the laptop lid is closed** and turning it right back on when opened.
 
 ## Project Structure
 
 - `tlp-switcher@local.extension/metadata.json` — Extension manifest (supports GNOME Shell 45–50)
 - `tlp-switcher@local.extension/extension.js` — Main indicator UI, menu, and async TLP subprocess controller
-- `tlp-switcher@local.extension/prefs.js` — Libadwaita extension preferences window (Panel Position settings)
+- `tlp-switcher@local.extension/neverSleep.js` — Never Sleep inhibitor & lid-close display DPMS controller
+- `tlp-switcher@local.extension/prefs.js` — Libadwaita extension preferences window (Never Sleep & Panel Position settings)
 - `tlp-switcher@local.extension/schemas/` — GSettings schema (`org.gnome.shell.extensions.tlp-switcher`)
 - `tlp-switcher@local.extension/stylesheet.css` — Top bar and popup menu styling
 - `sudoers/tlp-switcher` — Scoped passwordless sudo rule for `tlp ac|bat|start`

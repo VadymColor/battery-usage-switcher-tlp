@@ -1,4 +1,5 @@
 import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
@@ -18,6 +19,28 @@ export default class TlpSwitcherPreferences extends ExtensionPreferences {
             icon_name: 'preferences-system-symbolic',
         });
 
+        // 1. Sleep & Lid Behavior Group
+        const sleepGroup = new Adw.PreferencesGroup({
+            title: 'Sleep & Lid Behavior',
+            description: 'Keep your laptop awake and running even when the lid is closed.',
+        });
+
+        const neverSleepRow = new Adw.SwitchRow({
+            title: 'Never Sleep Mode',
+            subtitle: 'Keep all processes, music, and video active; switch off monitor only when laptop lid is closed',
+        });
+
+        settings.bind(
+            'never-sleep',
+            neverSleepRow,
+            'active',
+            Gio.SettingsBindFlags.DEFAULT
+        );
+
+        sleepGroup.add(neverSleepRow);
+        page.add(sleepGroup);
+
+        // 2. Panel Appearance Group
         const appearanceGroup = new Adw.PreferencesGroup({
             title: 'Panel Appearance',
             description: 'Configure where the TLP indicator appears on the top bar.',
@@ -62,6 +85,7 @@ export default class TlpSwitcherPreferences extends ExtensionPreferences {
 
         appearanceGroup.add(positionRow);
         page.add(appearanceGroup);
+
         window.add(page);
     }
 }

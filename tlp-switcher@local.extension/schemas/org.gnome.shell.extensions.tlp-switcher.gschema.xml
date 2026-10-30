@@ -11,5 +11,10 @@
       <summary>Panel Position</summary>
       <description>Horizontal position of the TLP indicator in the top panel (left, center, or right).</description>
     </key>
+    <key name="never-sleep" type="b">
+      <default>false</default>
+      <summary>Never Sleep Mode</summary>
+      <description>Keep the laptop awake and all processes, music, and video active; switch off the monitor only when the laptop lid is closed.</description>
+    </key>
   </schema>
 </schemalist>

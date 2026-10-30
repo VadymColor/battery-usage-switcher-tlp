@@ -9,6 +9,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import { NeverSleepController } from './neverSleep.js';
+
 const TLP_BIN = '/usr/sbin/tlp';
 const TLP_STAT_BIN = '/usr/bin/tlp-stat';
 const TLP_RUN_DIR = '/run/tlp';
@@ -62,8 +64,15 @@ class TlpIndicator extends PanelMenu.Button {
             style_class: 'tlp-panel-label',
         });
 
+        this._awakeIcon = new St.Icon({
+            icon_name: 'view-reveal-symbolic',
+            style_class: 'system-status-icon tlp-awake-icon',
+            visible: false,
+        });
+
         this._panelBox.add_child(this._panelIcon);
         this._panelBox.add_child(this._panelLabel);
+        this._panelBox.add_child(this._awakeIcon);
         this.add_child(this._panelBox);
     }
 
@@ -100,9 +109,20 @@ class TlpIndicator extends PanelMenu.Button {
             style_class: 'tlp-status-subtext',
         });
 
+        this._neverSleepStatusLabel = new St.Label({
+            text: 'Never Sleep: Off',
+            style_class: 'tlp-status-subtext',
+        });
+
         this._overrideBannerLabel = new St.Label({
             text: '',
             style_class: 'tlp-override-banner',
+            visible: false,
+        });
+
+        this._awakeBannerLabel = new St.Label({
+            text: '👁 Never Sleep Active — Monitor turns off on lid close',
+            style_class: 'tlp-awake-banner',
             visible: false,
         });
 
@@ -110,7 +130,9 @@ class TlpIndicator extends PanelMenu.Button {
         statusBox.add_child(this._modeStatusLabel);
         statusBox.add_child(this._powerSourceLabel);
         statusBox.add_child(this._serviceStateLabel);
+        statusBox.add_child(this._neverSleepStatusLabel);
         statusBox.add_child(this._overrideBannerLabel);
+        statusBox.add_child(this._awakeBannerLabel);
 
         this._statusItem.add_child(statusBox);
         statusSection.addMenuItem(this._statusItem);
@@ -145,6 +167,27 @@ class TlpIndicator extends PanelMenu.Button {
             this._switchTlpMode('start', 'Automatic (Default)');
         });
         this.menu.addMenuItem(this._autoItem);
+
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        // Never Sleep toggle switch
+        const initialNeverSleep = this._settings?.get_boolean('never-sleep') ?? false;
+        this._neverSleepSwitch = new PopupMenu.PopupSwitchMenuItem(
+            'Never Sleep (Monitor Off on Lid Close)',
+            initialNeverSleep
+        );
+        this._neverSleepSwitch.connect('toggled', (_item, state) => {
+            if (this._settings && this._settings.get_boolean('never-sleep') !== state) {
+                this._settings.set_boolean('never-sleep', state);
+                Main.notify(
+                    state ? 'Never Sleep Mode Enabled' : 'Never Sleep Mode Disabled',
+                    state
+                        ? 'All processes, music, and video stay active; monitor turns off when lid is closed.'
+                        : 'Standard system sleep and lid-close behavior restored.'
+                );
+            }
+        });
+        this.menu.addMenuItem(this._neverSleepSwitch);
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -193,6 +236,7 @@ class TlpIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._settingsItem);
 
         this.updatePositionOrnament();
+        this.updateNeverSleepUI();
 
         // Refresh status whenever the user opens the menu
         this._menuOpenChangedId = this.menu.connect('open-state-changed', (_menu, isOpen) => {
@@ -200,6 +244,30 @@ class TlpIndicator extends PanelMenu.Button {
                 this._refreshStatus();
             }
         });
+    }
+
+    updateNeverSleepUI() {
+        const isNeverSleep = this._settings?.get_boolean('never-sleep') ?? false;
+
+        if (this._awakeIcon) {
+            this._awakeIcon.visible = isNeverSleep;
+        }
+
+        if (this._neverSleepSwitch && this._neverSleepSwitch.state !== isNeverSleep) {
+            this._neverSleepSwitch.setToggleState(isNeverSleep);
+        }
+
+        if (this._neverSleepStatusLabel) {
+            this._neverSleepStatusLabel.set_text(
+                isNeverSleep
+                    ? 'Never Sleep: Active (Monitor off on lid close)'
+                    : 'Never Sleep: Off'
+            );
+        }
+
+        if (this._awakeBannerLabel) {
+            this._awakeBannerLabel.visible = isNeverSleep;
+        }
     }
 
     updatePositionOrnament() {
@@ -493,15 +561,55 @@ class TlpIndicator extends PanelMenu.Button {
 export default class TlpSwitcherExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
+        this._neverSleep = new NeverSleepController(this.uuid);
         this._indicator = new TlpIndicator(this._settings, () => this.openPreferences());
 
         const position = this._getValidPosition();
         const index = this._getInsertIndex(position);
         Main.panel.addToStatusArea(this.uuid, this._indicator, index, position);
 
-        this._settingsChangedId = this._settings.connect('changed::panel-position', () => {
+        this._syncSessionModeVisibility();
+        this._syncNeverSleep();
+
+        this._posChangedId = this._settings.connect('changed::panel-position', () => {
             this._updatePanelPosition();
         });
+
+        this._neverSleepChangedId = this._settings.connect('changed::never-sleep', () => {
+            this._syncNeverSleep();
+        });
+
+        this._sessionModeUpdatedId = Main.sessionMode.connect('updated', () => {
+            this._syncSessionModeVisibility();
+        });
+    }
+
+    _syncSessionModeVisibility() {
+        if (!this._indicator) {
+            return;
+        }
+
+        if (Main.sessionMode.isLocked) {
+            this._indicator.menu?.close();
+            this._indicator.container.hide();
+        } else {
+            this._indicator.container.show();
+        }
+    }
+
+    async _syncNeverSleep() {
+        const enabled = this._settings?.get_boolean('never-sleep') ?? false;
+        this._indicator?.updateNeverSleepUI();
+        if (this._neverSleep) {
+            const ok = await this._neverSleep.setEnabled(enabled);
+            if (enabled && !ok && this._settings?.get_boolean('never-sleep')) {
+                this._settings.set_boolean('never-sleep', false);
+                Main.notifyError(
+                    'TLP Switcher: Never Sleep Failed',
+                    'Could not acquire system sleep/lid inhibitor.'
+                );
+            }
+        }
     }
 
     _getValidPosition() {
@@ -545,11 +653,27 @@ export default class TlpSwitcherExtension extends Extension {
     }
 
     disable() {
-        if (this._settings && this._settingsChangedId) {
-            this._settings.disconnect(this._settingsChangedId);
-            this._settingsChangedId = null;
+        if (this._sessionModeUpdatedId) {
+            Main.sessionMode.disconnect(this._sessionModeUpdatedId);
+            this._sessionModeUpdatedId = null;
         }
-        this._settings = null;
+
+        if (this._settings) {
+            if (this._posChangedId) {
+                this._settings.disconnect(this._posChangedId);
+                this._posChangedId = null;
+            }
+            if (this._neverSleepChangedId) {
+                this._settings.disconnect(this._neverSleepChangedId);
+                this._neverSleepChangedId = null;
+            }
+            this._settings = null;
+        }
+
+        if (this._neverSleep) {
+            this._neverSleep.destroy();
+            this._neverSleep = null;
+        }
 
         if (this._indicator) {
             this._indicator.destroy();
