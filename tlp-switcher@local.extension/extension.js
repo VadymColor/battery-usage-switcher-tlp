@@ -170,12 +170,17 @@ class TlpIndicator extends PanelMenu.Button {
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        // Never Sleep toggle switch
+        // Never Sleep toggle switch (placed right before Refresh TLP Status)
         const initialNeverSleep = this._settings?.get_boolean('never-sleep') ?? false;
         this._neverSleepSwitch = new PopupMenu.PopupSwitchMenuItem(
-            'Never Sleep (Monitor Off on Lid Close)',
+            'Never Sleep Mode',
             initialNeverSleep
         );
+        const neverSleepIcon = new St.Icon({
+            icon_name: 'view-reveal-symbolic',
+            style_class: 'popup-menu-icon',
+        });
+        this._neverSleepSwitch.insert_child_below(neverSleepIcon, this._neverSleepSwitch.label);
         this._neverSleepSwitch.connect('toggled', (_item, state) => {
             if (this._settings && this._settings.get_boolean('never-sleep') !== state) {
                 this._settings.set_boolean('never-sleep', state);
